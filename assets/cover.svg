@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="450" viewBox="0 0 1400 450" role="img" aria-label="ElderAI Swarm cover">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#eef5ff"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0b1220" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <rect width="1400" height="450" fill="url(#bg)"/>
+
+  <!-- Title -->
+  <text x="70" y="115" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" font-size="72" font-weight="800" fill="#0b1220">ElderAI Swarm</text>
+
+  <!-- Tagline -->
+  <text x="70" y="200" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" font-size="78" font-weight="800" fill="#334155">Never Leave Your Parents Alone</text>
+
+  <!-- Subtitle -->
+  <text x="70" y="255" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" font-size="24" font-weight="500" fill="#334155" opacity="0.95">
+    A 100% offline, rule-based, multi-agent elderly care platform with health monitoring, medicine
+  </text>
+  <text x="70" y="285" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" font-size="24" font-weight="500" fill="#334155" opacity="0.95">
+    reminders, emergency response, companionship, and life coordination — ready to run offline.
+  </text>
+
+  <!-- Buttons -->
+  <g filter="url(#shadow)">
+    <rect x="70" y="330" rx="18" ry="18" width="590" height="70" fill="#0b1220"/>
+    <text x="365" y="375" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" font-size="26" font-weight="700" fill="#ffffff">Family Dashboard</text>
+
+    <rect x="710" y="330" rx="18" ry="18" width="620" height="70" fill="#3b82f6"/>
+    <text x="1020" y="375" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" font-size="26" font-weight="700" fill="#ffffff">Elder Interface</text>
+  </g>
+</svg>
