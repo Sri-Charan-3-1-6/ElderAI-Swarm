@@ -276,3 +276,4 @@ export function addEmergency(incident) {
   setItem(KEY.emergencies, next);
   return next;
 }
+

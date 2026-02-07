@@ -23,3 +23,197 @@
   transition: opacity 250ms ease, transform 250ms ease;
 }
 
+/* ===== GLOBAL RESPONSIVE DESIGN ===== */
+
+/* Base font size scaling for different devices */
+@media (max-width: 320px) {
+  /* Smartwatch/Very Small Mobile */
+  html {
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 321px) and (max-width: 480px) {
+  /* Mobile */
+  html {
+    font-size: 15px;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  /* Large Mobile/Small Tablet */
+  html {
+    font-size: 16px;
+  }
+}
+
+@media (min-width: 769px) {
+  /* Tablet/Desktop */
+  html {
+    font-size: 16px;
+  }
+}
+
+/* Touch-friendly minimum sizes */
+button, a, input, select {
+  min-height: 44px; /* WCAG touch target minimum */
+  min-width: 44px;
+}
+
+/* Prevent text from being too small on any device */
+.text-xs {
+  font-size: clamp(0.7rem, 2vw, 0.75rem) !important;
+}
+
+.text-sm {
+  font-size: clamp(0.8rem, 2.5vw, 0.875rem) !important;
+}
+
+.text-base {
+  font-size: clamp(0.9rem, 3vw, 1rem) !important;
+}
+
+.text-lg {
+  font-size: clamp(1rem, 3.5vw, 1.125rem) !important;
+}
+
+.text-xl {
+  font-size: clamp(1.1rem, 4vw, 1.25rem) !important;
+}
+
+.text-2xl {
+  font-size: clamp(1.3rem, 5vw, 1.5rem) !important;
+}
+
+.text-3xl {
+  font-size: clamp(1.6rem, 6vw, 1.875rem) !important;
+}
+
+.text-4xl {
+  font-size: clamp(1.9rem, 7vw, 2.25rem) !important;
+}
+
+/* Responsive padding */
+.p-3, .px-3, .py-3 {
+  padding: clamp(0.5rem, 2vw, 0.75rem) !important;
+}
+
+.p-4, .px-4, .py-4 {
+  padding: clamp(0.75rem, 2.5vw, 1rem) !important;
+}
+
+.p-5, .px-5, .py-5 {
+  padding: clamp(0.875rem, 3vw, 1.25rem) !important;
+}
+
+.p-6, .px-6, .py-6 {
+  padding: clamp(1rem, 3.5vw, 1.5rem) !important;
+}
+
+/* Responsive gaps */
+.gap-2 {
+  gap: clamp(0.375rem, 1.5vw, 0.5rem) !important;
+}
+
+.gap-3 {
+  gap: clamp(0.5rem, 2vw, 0.75rem) !important;
+}
+
+.gap-4 {
+  gap: clamp(0.75rem, 2.5vw, 1rem) !important;
+}
+
+.gap-5 {
+  gap: clamp(0.875rem, 3vw, 1.25rem) !important;
+}
+
+.gap-6 {
+  gap: clamp(1rem, 3.5vw, 1.5rem) !important;
+}
+
+/* Responsive border radius */
+.rounded-lg {
+  border-radius: clamp(0.5rem, 2vw, 0.75rem) !important;
+}
+
+.rounded-xl {
+  border-radius: clamp(0.625rem, 2.5vw, 1rem) !important;
+}
+
+.rounded-2xl {
+  border-radius: clamp(0.75rem, 3vw, 1.25rem) !important;
+}
+
+.rounded-3xl {
+  border-radius: clamp(1rem, 4vw, 1.5rem) !important;
+}
+
+/* Icon scaling */
+.lucide {
+  width: clamp(1rem, 4vw, 1.5rem) !important;
+  height: clamp(1rem, 4vw, 1.5rem) !important;
+}
+
+.h-5, .w-5 {
+  width: clamp(1rem, 4vw, 1.25rem) !important;
+  height: clamp(1rem, 4vw, 1.25rem) !important;
+}
+
+.h-6, .w-6 {
+  width: clamp(1.25rem, 4.5vw, 1.5rem) !important;
+  height: clamp(1.25rem, 4.5vw, 1.5rem) !important;
+}
+
+.h-7, .w-7 {
+  width: clamp(1.5rem, 5vw, 1.75rem) !important;
+  height: clamp(1.5rem, 5vw, 1.75rem) !important;
+}
+
+.h-12, .w-12 {
+  width: clamp(2.5rem, 8vw, 3rem) !important;
+  height: clamp(2.5rem, 8vw, 3rem) !important;
+}
+
+/* Responsive max-width containers */
+.max-w-5xl {
+  max-width: clamp(320px, 90vw, 64rem) !important;
+  padding-left: clamp(0.75rem, 3vw, 1.25rem) !important;
+  padding-right: clamp(0.75rem, 3vw, 1.25rem) !important;
+}
+
+/* Mobile-first grid adjustments */
+@media (max-width: 640px) {
+  .md\:grid-cols-2, .lg\:grid-cols-3, .sm\:grid-cols-2 {
+    grid-template-columns: repeat(1, 1fr) !important;
+  }
+  
+  .h-12 {
+    height: clamp(3rem, 12vw, 3.5rem) !important;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 768px) {
+  .md\:grid-cols-2, .lg\:grid-cols-3 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Smooth scrolling on touch devices */
+* {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Prevent text from overflowing */
+p, div, span {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Bottom navigation spacing on mobile */
+@media (max-width: 768px) {
+  main {
+    padding-bottom: clamp(6rem, 15vw, 8rem) !important;
+  }
+}
+

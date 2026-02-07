@@ -24,3 +24,4 @@ export default function EmergencyButton({ onPress, size = 'md', label = 'Emergen
     </button>
   );
 }
+

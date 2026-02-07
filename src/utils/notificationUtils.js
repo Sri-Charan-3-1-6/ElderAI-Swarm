@@ -34,3 +34,4 @@ export function subscribeToToasts(handler) {
   window.addEventListener(TOAST_EVENT, listener);
   return () => window.removeEventListener(TOAST_EVENT, listener);
 }
+

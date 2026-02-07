@@ -59,7 +59,7 @@ export default function FamilyDashboard() {
   const [activeAgent, setActiveAgent] = useState('overview');
 
   const logAction = (type, title, detail) => {
-    appendActivity({ id: `act_${Date.now()}`, type, title, ts: new Date().toISOString(), detail: detail || '' });
+    appendActivity({ id: `act_${Date.now()}`, type, title: ta(title), ts: new Date().toISOString(), detail: detail ? ta(detail) : '' });
   };
 
   const logProfileFieldIfChanged = (fieldLabel, before, after) => {
@@ -223,64 +223,65 @@ export default function FamilyDashboard() {
 
   const page = (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="rounded-card bg-white shadow-card ring-1 ring-slate-100 p-6 lg:col-span-2">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-2xl bg-slate-100" aria-label={ta('Profile photo placeholder')} />
+      <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: 'clamp(1rem, 3vw, 1.5rem)' }}>
+        <div className="rounded-card bg-white shadow-card border-2 border-slate-700 lg:col-span-2" style={{ padding: 'clamp(1rem, 3vw, 1.5rem)' }}>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between" style={{ gap: 'clamp(0.75rem, 2vw, 1rem)' }}>
+            <div className="flex items-center" style={{ gap: 'clamp(0.75rem, 2vw, 1rem)' }}>
+              <div className="rounded-2xl bg-slate-100" style={{ height: 'clamp(3.5rem, 12vw, 4rem)', width: 'clamp(3.5rem, 12vw, 4rem)' }} aria-label={ta('Profile photo placeholder')} />
               <div>
-                <div className="text-2xl font-extrabold">{profile?.name}</div>
-                <div className="text-slate-600">{ta('Age')} {profile?.age} • {profile?.language}</div>
-                <div className="mt-1 flex items-center gap-2 text-sm text-slate-600">
-                  <MapPin className="h-4 w-4" aria-hidden="true" />
+                <div className="font-extrabold" style={{ fontSize: 'clamp(1.25rem, 5vw, 1.5rem)' }}>{profile?.name}</div>
+                <div className="text-slate-600" style={{ fontSize: 'clamp(0.875rem, 3.5vw, 1rem)' }}>{ta('Age')} {profile?.age} • {profile?.language}</div>
+                <div className="mt-1 flex items-center text-slate-600" style={{ gap: 'clamp(0.375rem, 1.5vw, 0.5rem)', fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>
+                  {React.cloneElement(<MapPin aria-hidden="true" />, { style: { width: 'clamp(0.75rem, 3vw, 1rem)', height: 'clamp(0.75rem, 3vw, 1rem)' } })}
                   <span className="truncate">{profile?.location?.address}</span>
                 </div>
-                <div className="mt-1 text-xs font-semibold text-slate-500">
+                <div className="mt-1 font-semibold text-slate-500" style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.75rem)' }}>
                   {ta('Live location')}: {fmtCoords(profile?.location?.coordinates)}{profile?.location?.lastUpdatedISO ? ` • ${new Date(profile.location.lastUpdatedISO).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : ''}
                 </div>
               </div>
             </div>
 
-            <div className="rounded-2xl bg-slate-50 p-4">
-              <div className="flex items-center gap-2">
+            <div className="rounded-2xl bg-white border border-slate-600" style={{ padding: 'clamp(0.75rem, 2.5vw, 1rem)' }}>
+              <div className="flex items-center" style={{ gap: 'clamp(0.375rem, 1.5vw, 0.5rem)' }}>
                 <StatusIndicator status={status.online ? 'active' : 'inactive'} />
-                <div className="text-sm font-extrabold text-slate-800">{status.online ? t('status.online') : t('status.offline')}</div>
+                <div className="font-extrabold text-slate-800" style={{ fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>{status.online ? t('status.online') : t('status.offline')}</div>
               </div>
-              <div className="mt-2 text-sm text-slate-600">{ta('Last active')}: {new Date(status.lastActiveISO).toLocaleString()}</div>
+              <div className="mt-2 text-slate-600" style={{ fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>{ta('Last active')}: {new Date(status.lastActiveISO).toLocaleString()}</div>
             </div>
 
-            <div className="rounded-2xl bg-slate-50 p-4">
-              <div className="text-xs font-semibold text-slate-500">{ta('Live clock')}</div>
-              <div className="mt-1 text-lg font-extrabold text-slate-900">
+            <div className="rounded-2xl bg-white border border-slate-600" style={{ padding: 'clamp(0.75rem, 2.5vw, 1rem)' }}>
+              <div className="font-semibold text-slate-500" style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.75rem)' }}>{ta('Live clock')}</div>
+              <div className="mt-1 font-extrabold text-slate-900" style={{ fontSize: 'clamp(1rem, 4vw, 1.125rem)' }}>
                 {clockNow.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </div>
-              <div className="text-sm text-slate-600">{clockNow.toLocaleDateString()}</div>
+              <div className="text-slate-600" style={{ fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>{clockNow.toLocaleDateString()}</div>
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3" style={{ gap: 'clamp(0.75rem, 2vw, 1rem)' }}>
             <Metric title={ta('Overall health')} value={`${score}/100`} badge={ta(score >= 80 ? 'All Systems Normal' : score >= 60 ? 'Needs Attention' : 'High Risk')} badgeTone={score >= 80 ? 'success' : score >= 60 ? 'warning' : 'danger'} icon={<CheckCircle2 className="h-5 w-5" aria-hidden="true" />} />
             <Metric title={ta('Steps today')} value={`${(health?.steps ?? []).slice(-1)[0]?.steps ?? 1847}`} icon={<Activity className="h-5 w-5" aria-hidden="true" />} />
             <Metric title={ta('Medicines taken')} value={medicinesTakenText} icon={<Pill className="h-5 w-5" aria-hidden="true" />} />
           </div>
 
-          <div className="mt-6 rounded-2xl bg-slate-900 p-5 text-white">
-            <div className="flex items-center justify-between gap-4">
+          <div className="mt-6 rounded-2xl bg-slate-900 text-white" style={{ padding: 'clamp(0.875rem, 3vw, 1.25rem)' }}>
+            <div className="flex items-center justify-between" style={{ gap: 'clamp(0.75rem, 2vw, 1rem)' }}>
               <div>
-                <div className="text-lg font-extrabold">{ta('Daily Report Summary')}</div>
-                <div className="mt-1 text-white/80">{ta('Health trends, compliance, activities, and AI interactions.')}</div>
+                <div className="font-extrabold" style={{ fontSize: 'clamp(1rem, 4vw, 1.125rem)' }}>{ta('Daily Report Summary')}</div>
+                <div className="mt-1 text-white/80" style={{ fontSize: 'clamp(0.875rem, 3.5vw, 1rem)' }}>{ta('Health trends, compliance, activities, and AI interactions.')}</div>
               </div>
               <button
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-white/10 px-4 py-2 text-sm font-extrabold text-white hover:bg-white/15"
+                className="inline-flex items-center justify-center rounded-lg bg-white/10 font-extrabold text-white hover:bg-white/15"
+                style={{ gap: 'clamp(0.375rem, 1.5vw, 0.5rem)', paddingLeft: 'clamp(0.75rem, 2.5vw, 1rem)', paddingRight: 'clamp(0.75rem, 2.5vw, 1rem)', paddingTop: 'clamp(0.375rem, 1.5vw, 0.5rem)', paddingBottom: 'clamp(0.375rem, 1.5vw, 0.5rem)', fontSize: 'clamp(0.75rem, 3vw, 0.875rem)', minHeight: '44px' }}
                 onClick={() => {
                   downloadHtmlReport('elderai-daily-report.html', reportHtml);
                 }}
                 aria-label={ta('Download daily report')}
               >
-                <Download aria-hidden="true" /> {ta('Download Report')}
+                {React.cloneElement(<Download aria-hidden="true" />, { style: { width: 'clamp(0.875rem, 3.5vw, 1.25rem)', height: 'clamp(0.875rem, 3.5vw, 1.25rem)' } })} {ta('Download Report')}
               </button>
             </div>
-            <div className="mt-4 h-44 rounded-xl bg-white/5 p-3">
+            <div className="mt-4 rounded-xl bg-white/5" style={{ height: 'clamp(10rem, 32vw, 11rem)', padding: 'clamp(0.625rem, 2vw, 0.75rem)' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={hrChart}>
                   <XAxis dataKey="t" tick={{ fill: '#cbd5e1', fontSize: 12 }} />
@@ -294,13 +295,14 @@ export default function FamilyDashboard() {
         </div>
 
         <div className="space-y-6">
-          <div className="rounded-card bg-white shadow-card ring-1 ring-slate-100 p-5">
-            <div className="text-lg font-extrabold">{ta('Profile & Contacts')}</div>
+          <div className="rounded-card bg-white shadow-card ring-1 ring-slate-100" style={{ padding: 'clamp(0.875rem, 3vw, 1.25rem)' }}>
+            <div className="font-extrabold" style={{ fontSize: 'clamp(1rem, 4vw, 1.125rem)' }}>{ta('Profile & Contacts')}</div>
             <div className="mt-3 space-y-3">
               <label className="block">
-                <div className="text-xs font-semibold text-slate-500">{ta('Name')}</div>
+                <div className="font-semibold text-slate-500" style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.75rem)' }}>{ta('Name')}</div>
                 <input
-                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
+                  className="mt-1 w-full rounded-lg border border-slate-200"
+                  style={{ paddingLeft: 'clamp(0.625rem, 2vw, 0.75rem)', paddingRight: 'clamp(0.625rem, 2vw, 0.75rem)', paddingTop: 'clamp(0.375rem, 1.5vw, 0.5rem)', paddingBottom: 'clamp(0.375rem, 1.5vw, 0.5rem)', fontSize: 'clamp(0.875rem, 3.5vw, 1rem)', minHeight: '44px' }}
                   value={profile?.name ?? ''}
                   onChange={(e) => updateProfile((p) => ({ ...(p ?? {}), name: e.target.value }))}
                   onFocus={(e) => {
@@ -311,11 +313,12 @@ export default function FamilyDashboard() {
                 />
               </label>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2" style={{ gap: 'clamp(0.5rem, 1.5vw, 0.75rem)' }}>
                 <label className="block">
-                  <div className="text-xs font-semibold text-slate-500">{ta('Age')}</div>
+                  <div className="font-semibold text-slate-500" style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.75rem)' }}>{ta('Age')}</div>
                   <input
-                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
+                    className="mt-1 w-full rounded-lg border border-slate-200"
+                    style={{ paddingLeft: 'clamp(0.625rem, 2vw, 0.75rem)', paddingRight: 'clamp(0.625rem, 2vw, 0.75rem)', paddingTop: 'clamp(0.375rem, 1.5vw, 0.5rem)', paddingBottom: 'clamp(0.375rem, 1.5vw, 0.5rem)', fontSize: 'clamp(0.875rem, 3.5vw, 1rem)', minHeight: '44px' }}
                     inputMode="numeric"
                     value={profile?.age ?? ''}
                     onChange={(e) => updateProfile((p) => ({ ...(p ?? {}), age: e.target.value }))}
@@ -327,9 +330,10 @@ export default function FamilyDashboard() {
                   />
                 </label>
                 <label className="block">
-                  <div className="text-xs font-semibold text-slate-500">{ta('Language')}</div>
+                  <div className="font-semibold text-slate-500" style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.75rem)' }}>{ta('Language')}</div>
                   <select
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2"
+                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white"
+                    style={{ paddingLeft: 'clamp(0.625rem, 2vw, 0.75rem)', paddingRight: 'clamp(0.625rem, 2vw, 0.75rem)', paddingTop: 'clamp(0.375rem, 1.5vw, 0.5rem)', paddingBottom: 'clamp(0.375rem, 1.5vw, 0.5rem)', fontSize: 'clamp(0.875rem, 3.5vw, 1rem)', minHeight: '44px' }}
                     value={lang}
                     onChange={(e) => {
                       const prev = profile?.language;
@@ -351,9 +355,10 @@ export default function FamilyDashboard() {
               </div>
 
               <label className="block">
-                <div className="text-xs font-semibold text-slate-500">{ta('Address')}</div>
+                <div className="font-semibold text-slate-500" style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.75rem)' }}>{ta('Address')}</div>
                 <input
-                  className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2"
+                  className="mt-1 w-full rounded-lg border border-slate-200"
+                  style={{ paddingLeft: 'clamp(0.625rem, 2vw, 0.75rem)', paddingRight: 'clamp(0.625rem, 2vw, 0.75rem)', paddingTop: 'clamp(0.375rem, 1.5vw, 0.5rem)', paddingBottom: 'clamp(0.375rem, 1.5vw, 0.5rem)', fontSize: 'clamp(0.875rem, 3.5vw, 1rem)', minHeight: '44px' }}
                   value={profile?.location?.address ?? ''}
                   onChange={(e) => updateProfile((p) => ({ ...(p ?? {}), location: { ...(p?.location ?? {}), address: e.target.value } }))}
                   onFocus={(e) => {
@@ -364,26 +369,27 @@ export default function FamilyDashboard() {
                 />
               </label>
 
-              <div className="rounded-xl bg-slate-50 p-3">
-                <div className="text-xs font-semibold text-slate-500">{ta('Live location')}</div>
-                <div className="mt-1 text-sm font-extrabold text-slate-900">{fmtCoords(profile?.location?.coordinates)}</div>
-                <div className="text-xs font-semibold text-slate-500">{ta('Updated')}: {profile?.location?.lastUpdatedISO ? new Date(profile.location.lastUpdatedISO).toLocaleString() : '—'}</div>
-                <div className="text-xs font-semibold text-slate-500">{ta('Tracking')}: {profile?.location?.trackingEnabled ? ta('On') : ta('Off')}</div>
+              <div className="rounded-xl bg-white border border-slate-600" style={{ padding: 'clamp(0.625rem, 2vw, 0.75rem)' }}>
+                <div className="font-semibold text-slate-500" style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.75rem)' }}>{ta('Live location')}</div>
+                <div className="mt-1 font-extrabold text-slate-900" style={{ fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>{fmtCoords(profile?.location?.coordinates)}</div>
+                <div className="font-semibold text-slate-500" style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.75rem)' }}>{ta('Updated')}: {profile?.location?.lastUpdatedISO ? new Date(profile.location.lastUpdatedISO).toLocaleString() : '—'}</div>
+                <div className="font-semibold text-slate-500" style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.75rem)' }}>{ta('Tracking')}: {profile?.location?.trackingEnabled ? ta('On') : ta('Off')}</div>
               </div>
 
               <div className="pt-2">
-                <div className="text-sm font-extrabold text-slate-900">{ta('Contacts')}</div>
+                <div className="font-extrabold text-slate-900" style={{ fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>{ta('Contacts')}</div>
                 <div className="mt-2 space-y-2">
                   {(profile?.contacts ?? []).map((c) => (
-                    <div key={c.id} className="rounded-xl bg-slate-50 p-3">
-                      <div className="flex items-center justify-between gap-3">
+                    <div key={c.id} className="rounded-xl bg-white border border-slate-600" style={{ padding: 'clamp(0.625rem, 2vw, 0.75rem)' }}>
+                      <div className="flex items-center justify-between" style={{ gap: 'clamp(0.5rem, 1.5vw, 0.75rem)' }}>
                         <div className="min-w-0">
-                          <div className="font-extrabold truncate">{c.name}</div>
-                          <div className="text-sm text-slate-600">{c.relation}{c.isEmergency ? ` • ${ta('Emergency')}` : ''}</div>
-                          <div className="text-sm font-semibold text-slate-700">{c.phone || ta('No phone set')}</div>
+                          <div className="font-extrabold truncate" style={{ fontSize: 'clamp(0.875rem, 3.5vw, 1rem)' }}>{c.name}</div>
+                          <div className="text-slate-600" style={{ fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>{c.relation}{c.isEmergency ? ` • ${ta('Emergency')}` : ''}</div>
+                          <div className="font-semibold text-slate-700" style={{ fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>{c.phone || ta('No phone set')}</div>
                         </div>
                         <button
-                          className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-extrabold text-white"
+                          className="rounded-lg bg-slate-900 font-extrabold text-white"
+                          style={{ paddingLeft: 'clamp(0.625rem, 2vw, 0.75rem)', paddingRight: 'clamp(0.625rem, 2vw, 0.75rem)', paddingTop: 'clamp(0.375rem, 1.5vw, 0.5rem)', paddingBottom: 'clamp(0.375rem, 1.5vw, 0.5rem)', fontSize: 'clamp(0.75rem, 3vw, 0.875rem)', minHeight: '44px' }}
                           onClick={() => {
                             updateProfile((p) => ({ ...(p ?? {}), contacts: (p?.contacts ?? []).filter((x) => x.id !== c.id) }));
                             logAction('activity', 'Contact removed', c.name);
@@ -397,20 +403,21 @@ export default function FamilyDashboard() {
                   ))}
                 </div>
 
-                <div className="mt-3 rounded-xl bg-slate-50 p-3">
-                  <div className="text-sm font-extrabold text-slate-900">{ta('Add contact')}</div>
+                <div className="mt-3 rounded-xl bg-white border border-slate-600" style={{ padding: 'clamp(0.625rem, 2vw, 0.75rem)' }}>
+                  <div className="font-extrabold text-slate-900" style={{ fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>{ta('Add contact')}</div>
                   <div className="mt-2 space-y-2">
-                    <input className="w-full rounded-lg border border-slate-200 px-3 py-2" value={contactDraft.name} onChange={(e) => setContactDraft((s) => ({ ...s, name: e.target.value }))} placeholder={ta('Name')} aria-label={ta('New contact name')} />
-                    <div className="grid grid-cols-2 gap-2">
-                      <input className="w-full rounded-lg border border-slate-200 px-3 py-2" value={contactDraft.relation} onChange={(e) => setContactDraft((s) => ({ ...s, relation: e.target.value }))} placeholder={ta('Relation')} aria-label={ta('New contact relation')} />
-                      <input className="w-full rounded-lg border border-slate-200 px-3 py-2" value={contactDraft.phone} onChange={(e) => setContactDraft((s) => ({ ...s, phone: e.target.value }))} placeholder={ta('Phone')} aria-label={ta('New contact phone')} />
+                    <input className="w-full rounded-lg border border-slate-200" style={{ paddingLeft: 'clamp(0.625rem, 2vw, 0.75rem)', paddingRight: 'clamp(0.625rem, 2vw, 0.75rem)', paddingTop: 'clamp(0.375rem, 1.5vw, 0.5rem)', paddingBottom: 'clamp(0.375rem, 1.5vw, 0.5rem)', fontSize: 'clamp(0.875rem, 3.5vw, 1rem)', minHeight: '44px' }} value={contactDraft.name} onChange={(e) => setContactDraft((s) => ({ ...s, name: e.target.value }))} placeholder={ta('Name')} aria-label={ta('New contact name')} />
+                    <div className="grid grid-cols-2" style={{ gap: 'clamp(0.375rem, 1.5vw, 0.5rem)' }}>
+                      <input className="w-full rounded-lg border border-slate-200" style={{ paddingLeft: 'clamp(0.625rem, 2vw, 0.75rem)', paddingRight: 'clamp(0.625rem, 2vw, 0.75rem)', paddingTop: 'clamp(0.375rem, 1.5vw, 0.5rem)', paddingBottom: 'clamp(0.375rem, 1.5vw, 0.5rem)', fontSize: 'clamp(0.875rem, 3.5vw, 1rem)', minHeight: '44px' }} value={contactDraft.relation} onChange={(e) => setContactDraft((s) => ({ ...s, relation: e.target.value }))} placeholder={ta('Relation')} aria-label={ta('New contact relation')} />
+                      <input className="w-full rounded-lg border border-slate-200" style={{ paddingLeft: 'clamp(0.625rem, 2vw, 0.75rem)', paddingRight: 'clamp(0.625rem, 2vw, 0.75rem)', paddingTop: 'clamp(0.375rem, 1.5vw, 0.5rem)', paddingBottom: 'clamp(0.375rem, 1.5vw, 0.5rem)', fontSize: 'clamp(0.875rem, 3.5vw, 1rem)', minHeight: '44px' }} value={contactDraft.phone} onChange={(e) => setContactDraft((s) => ({ ...s, phone: e.target.value }))} placeholder={ta('Phone')} aria-label={ta('New contact phone')} />
                     </div>
-                    <label className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+                    <label className="inline-flex items-center font-semibold text-slate-700" style={{ gap: 'clamp(0.375rem, 1.5vw, 0.5rem)', fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>
                       <input type="checkbox" checked={contactDraft.isEmergency} onChange={(e) => setContactDraft((s) => ({ ...s, isEmergency: e.target.checked }))} />
                       {ta('Emergency contact')}
                     </label>
                     <button
-                      className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-extrabold text-white"
+                      className="w-full rounded-lg bg-primary font-extrabold text-white"
+                      style={{ paddingLeft: 'clamp(0.75rem, 2.5vw, 1rem)', paddingRight: 'clamp(0.75rem, 2.5vw, 1rem)', paddingTop: 'clamp(0.375rem, 1.5vw, 0.5rem)', paddingBottom: 'clamp(0.375rem, 1.5vw, 0.5rem)', fontSize: 'clamp(0.75rem, 3vw, 0.875rem)', minHeight: '44px' }}
                       onClick={() => {
                         if (!contactDraft.name.trim()) return;
                         updateProfile((p) => ({
@@ -440,15 +447,15 @@ export default function FamilyDashboard() {
             </div>
           </div>
 
-          <div className="rounded-card bg-white shadow-card ring-1 ring-slate-100 p-5">
+          <div className="rounded-card bg-white shadow-card ring-1 ring-slate-100" style={{ padding: 'clamp(0.875rem, 3vw, 1.25rem)' }}>
             <div className="flex items-center justify-between">
-              <div className="text-lg font-extrabold">{ta('Real-time Monitoring')}</div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-extrabold text-slate-700">
+              <div className="font-extrabold" style={{ fontSize: 'clamp(1rem, 4vw, 1.125rem)' }}>{ta('Real-time Monitoring')}</div>
+              <div className="inline-flex items-center rounded-full bg-slate-100 font-extrabold text-slate-700" style={{ gap: 'clamp(0.375rem, 1.5vw, 0.5rem)', paddingLeft: 'clamp(0.625rem, 2vw, 0.75rem)', paddingRight: 'clamp(0.625rem, 2vw, 0.75rem)', paddingTop: 'clamp(0.25rem, 1vw, 0.375rem)', paddingBottom: 'clamp(0.25rem, 1vw, 0.375rem)', fontSize: 'clamp(0.625rem, 2.5vw, 0.75rem)' }}>
                 <StatusIndicator status={status.online ? 'active' : 'inactive'} /> {status.online ? ta('LIVE') : ta('OFFLINE')}
               </div>
             </div>
 
-            <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="mt-3 grid grid-cols-2" style={{ gap: 'clamp(0.5rem, 1.5vw, 0.75rem)' }}>
               <MonitorItem label="Health" value={monitoring.health} />
               <MonitorItem label="Medicines" value={monitoring.medicines} />
               <MonitorItem label="Emergencies" value={monitoring.emergencies} />
@@ -459,37 +466,37 @@ export default function FamilyDashboard() {
             </div>
           </div>
 
-          <div className={"rounded-card shadow-card ring-1 p-5 " + (activeEmergency ? 'bg-danger/5 ring-danger/20' : 'bg-white ring-slate-100')}>
+          <div className={"rounded-card shadow-card ring-1 " + (activeEmergency ? 'bg-danger/5 ring-danger/20' : 'bg-white ring-slate-100')} style={{ padding: 'clamp(0.875rem, 3vw, 1.25rem)' }}>
             <div className="flex items-center justify-between">
-              <div className="text-lg font-extrabold">{ta('Emergency Alerts')}</div>
-              <ShieldAlert className={"h-5 w-5 " + (activeEmergency ? 'text-danger' : 'text-slate-400')} aria-hidden="true" />
+              <div className="font-extrabold" style={{ fontSize: 'clamp(1rem, 4vw, 1.125rem)' }}>{ta('Emergency Alerts')}</div>
+              {React.cloneElement(<ShieldAlert className={activeEmergency ? 'text-danger' : 'text-slate-400'} aria-hidden="true" />, { style: { width: 'clamp(0.875rem, 3.5vw, 1.25rem)', height: 'clamp(0.875rem, 3.5vw, 1.25rem)' } })}
             </div>
             {activeEmergency ? (
-              <div className="mt-3 rounded-xl bg-danger/10 p-4">
-                <div className="font-extrabold text-danger">{ta('Emergency active')}: {activeEmergency.type}</div>
-                <div className="mt-1 text-sm text-slate-700">{ta('Started')}: {new Date(activeEmergency.startedAtISO).toLocaleString()}</div>
-                <button className="mt-3 w-full rounded-lg bg-danger px-4 py-3 text-sm font-extrabold text-white" onClick={() => setActiveAgent('emergency')} aria-label={ta('View emergency details')}>
+              <div className="mt-3 rounded-xl bg-danger/10" style={{ padding: 'clamp(0.75rem, 2.5vw, 1rem)' }}>
+                <div className="font-extrabold text-danger" style={{ fontSize: 'clamp(0.875rem, 3.5vw, 1rem)' }}>{ta('Emergency active')}: {activeEmergency.type}</div>
+                <div className="mt-1 text-slate-700" style={{ fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>{ta('Started')}: {new Date(activeEmergency.startedAtISO).toLocaleString()}</div>
+                <button className="mt-3 w-full rounded-lg bg-danger font-extrabold text-white" style={{ paddingLeft: 'clamp(0.75rem, 2.5vw, 1rem)', paddingRight: 'clamp(0.75rem, 2.5vw, 1rem)', paddingTop: 'clamp(0.625rem, 2vw, 0.75rem)', paddingBottom: 'clamp(0.625rem, 2vw, 0.75rem)', fontSize: 'clamp(0.75rem, 3vw, 0.875rem)', minHeight: '44px' }} onClick={() => setActiveAgent('emergency')} aria-label={ta('View emergency details')}>
                   {ta('View Details')}
                 </button>
               </div>
             ) : (
-              <div className="mt-3 rounded-xl bg-success/10 p-4">
-                <div className="font-extrabold text-success">{ta('No emergencies today')}</div>
-                <div className="mt-1 text-sm text-slate-700">{ta('System monitoring is active.')}</div>
+              <div className="mt-3 rounded-xl bg-success/10" style={{ padding: 'clamp(0.75rem, 2.5vw, 1rem)' }}>
+                <div className="font-extrabold text-success" style={{ fontSize: 'clamp(0.875rem, 3.5vw, 1rem)' }}>{ta('No emergencies today')}</div>
+                <div className="mt-1 text-slate-700" style={{ fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>{ta('System monitoring is active.')}</div>
               </div>
             )}
           </div>
 
-          <div className="rounded-card bg-white shadow-card ring-1 ring-slate-100 p-5">
-            <div className="text-lg font-extrabold">{ta('Recent Activities')}</div>
-            <div className="mt-3 max-h-[360px] space-y-2 overflow-auto pr-1" aria-label={ta('Activities timeline')}>
+          <div className="rounded-card bg-white shadow-card ring-1 ring-slate-100" style={{ padding: 'clamp(0.875rem, 3vw, 1.25rem)' }}>
+            <div className="font-extrabold" style={{ fontSize: 'clamp(1rem, 4vw, 1.125rem)' }}>{ta('Recent Activities')}</div>
+            <div className="mt-3 space-y-2 overflow-auto pr-1" style={{ maxHeight: 'clamp(20rem, 60vw, 22.5rem)' }} aria-label={ta('Activities timeline')}>
               {(activities ?? []).map((a) => (
-                <div key={a.id} className="flex items-start justify-between rounded-xl bg-slate-50 p-3">
+                <div key={a.id} className="flex items-start justify-between rounded-xl bg-white border border-slate-600" style={{ padding: 'clamp(0.625rem, 2vw, 0.75rem)' }}>
                   <div>
-                    <div className="font-extrabold text-slate-900">{a.title}</div>
-                    <div className="text-sm text-slate-600">{a.detail}</div>
+                    <div className="font-extrabold text-slate-900" style={{ fontSize: 'clamp(0.875rem, 3.5vw, 1rem)' }}>{a.title}</div>
+                    <div className="text-slate-600" style={{ fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>{a.detail}</div>
                   </div>
-                  <div className={"ml-3 text-xs font-bold " + colorByType(a.type)}>
+                  <div className={"ml-3 font-bold " + colorByType(a.type)} style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.75rem)' }}>
                     {new Date(a.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
@@ -499,13 +506,13 @@ export default function FamilyDashboard() {
         </div>
       </div>
 
-      <div className="rounded-card bg-white shadow-card ring-1 ring-slate-100 p-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div className="rounded-card bg-white shadow-card ring-1 ring-slate-100" style={{ padding: 'clamp(1rem, 3vw, 1.5rem)' }}>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between" style={{ gap: 'clamp(0.375rem, 1.5vw, 0.5rem)' }}>
           <div>
-            <h2 className="text-2xl font-extrabold">{ta('AI Agents')}</h2>
-            <p className="mt-1 text-slate-600">{ta('All five agents run offline-first with local persistence.')}</p>
+            <h2 className="font-extrabold" style={{ fontSize: 'clamp(1.25rem, 5vw, 1.5rem)' }}>{ta('AI Agents')}</h2>
+            <p className="mt-1 text-slate-600" style={{ fontSize: 'clamp(0.875rem, 3.5vw, 1rem)' }}>{ta('All five agents run offline-first with local persistence.')}</p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap" style={{ gap: 'clamp(0.375rem, 1.5vw, 0.5rem)' }}>
             <TabButton active={activeAgent === 'overview'} onClick={() => setActiveAgent('overview')} label={ta('Overview')} />
             <TabButton active={activeAgent === 'health'} onClick={() => setActiveAgent('health')} label={ta('Health')} />
             <TabButton active={activeAgent === 'medicine'} onClick={() => setActiveAgent('medicine')} label={ta('Medicine')} />
@@ -516,7 +523,7 @@ export default function FamilyDashboard() {
         </div>
 
         {activeAgent === 'overview' ? (
-          <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3" style={{ gap: 'clamp(1rem, 3vw, 1.5rem)' }}>
             <AgentCard
               title={ta('Health Guardian')}
               subtitle={ta('Vitals + charts')}
@@ -586,14 +593,14 @@ export default function FamilyDashboard() {
 
 function Metric({ title, value, icon, badge, badgeTone }) {
   return (
-    <div className="rounded-2xl bg-slate-50 p-4">
+    <div className="rounded-2xl bg-white border border-slate-600" style={{ padding: 'clamp(0.75rem, 2.5vw, 1rem)' }}>
       <div className="flex items-center justify-between">
-        <div className="text-xs font-semibold text-slate-500">{title}</div>
+        <div className="font-semibold text-slate-500" style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.75rem)' }}>{title}</div>
         <div className="text-slate-700">{icon}</div>
       </div>
-      <div className="mt-1 text-2xl font-extrabold text-slate-900">{value}</div>
+      <div className="mt-1 font-extrabold text-slate-900" style={{ fontSize: 'clamp(1.25rem, 5vw, 1.5rem)' }}>{value}</div>
       {badge ? (
-        <div className={"mt-2 inline-flex rounded-full px-3 py-1 text-xs font-extrabold " + tone(badgeTone)}>
+        <div className={"mt-2 inline-flex rounded-full font-extrabold " + tone(badgeTone)} style={{ paddingLeft: 'clamp(0.625rem, 2vw, 0.75rem)', paddingRight: 'clamp(0.625rem, 2vw, 0.75rem)', paddingTop: 'clamp(0.25rem, 1vw, 0.375rem)', paddingBottom: 'clamp(0.25rem, 1vw, 0.375rem)', fontSize: 'clamp(0.625rem, 2.5vw, 0.75rem)' }}>
           {badge}
         </div>
       ) : null}
@@ -612,9 +619,10 @@ function TabButton({ active, onClick, label }) {
   return (
     <button
       className={
-        'rounded-full px-4 py-2 text-sm font-extrabold transition focus:outline-none ' +
+        'rounded-full font-extrabold transition focus:outline-none ' +
         (active ? 'bg-primary text-white' : 'bg-slate-100 text-slate-800 hover:bg-slate-200')
       }
+      style={{ paddingLeft: 'clamp(0.75rem, 2.5vw, 1rem)', paddingRight: 'clamp(0.75rem, 2.5vw, 1rem)', paddingTop: 'clamp(0.375rem, 1.5vw, 0.5rem)', paddingBottom: 'clamp(0.375rem, 1.5vw, 0.5rem)', fontSize: 'clamp(0.75rem, 3vw, 0.875rem)', minHeight: '44px' }}
       onClick={onClick}
       aria-label={label}
     >
@@ -632,9 +640,10 @@ function colorByType(type) {
 
 function MonitorItem({ label, value }) {
   return (
-    <div className="rounded-xl bg-slate-50 p-3">
-      <div className="text-xs font-semibold text-slate-500">{label}</div>
-      <div className="mt-1 text-sm font-extrabold text-slate-900">{value}</div>
+    <div className="rounded-xl bg-white border border-slate-600" style={{ padding: 'clamp(0.625rem, 2vw, 0.75rem)' }}>
+      <div className="font-semibold text-slate-500" style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.75rem)' }}>{label}</div>
+      <div className="mt-1 font-extrabold text-slate-900" style={{ fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>{value}</div>
     </div>
   );
 }
+

@@ -184,6 +184,24 @@ function offlineTranslate(text, from, to) {
   return mapped || t;
 }
 
+async function translateViaLibre(text, from, to, signal) {
+  // Public fallback translator (no API key). Best-effort; if it fails we fall back to offline phrasebook.
+  try {
+    const res = await fetch('https://libretranslate.de/translate', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ q: text, source: from, target: to, format: 'text' }),
+      signal
+    });
+
+    if (!res.ok) return '';
+    const json = await res.json();
+    return String(json?.translatedText || '').trim();
+  } catch {
+    return '';
+  }
+}
+
 export async function translateText({ text, from = 'en', to = 'en', signal } = {}) {
   const src = normalizeLangCode(from);
   const dst = normalizeLangCode(to);
@@ -193,6 +211,8 @@ export async function translateText({ text, from = 'en', to = 'en', signal } = {
 
   const cfg = getAIConfig();
   if (!cfg.enabled) {
+    const cloud = await translateViaLibre(t, src, dst, signal);
+    if (cloud) return cloud;
     return offlineTranslate(t, src, dst);
   }
 
@@ -229,3 +249,4 @@ export async function translateText({ text, from = 'en', to = 'en', signal } = {
 
   return String(res?.text || '').trim() || offlineTranslate(t, src, dst);
 }
+

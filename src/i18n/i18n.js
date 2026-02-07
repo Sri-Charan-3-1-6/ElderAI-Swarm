@@ -154,3 +154,4 @@ export function langToSpeechLocale(lang) {
 export function langLabel(lang) {
   return languageLabelFromCode(lang);
 }
+

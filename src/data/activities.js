@@ -111,3 +111,4 @@ export const preloadedChat = [
   { id: 'm8', from: 'elder', text: 'Hehe okay.', ts: minutesAgo(611) },
   { id: 'm9', from: 'ai', text: 'Now, medicine time soon. I will remind you gently, ok?', ts: minutesAgo(610) }
 ];
+

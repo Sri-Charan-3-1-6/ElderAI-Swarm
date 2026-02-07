@@ -109,3 +109,4 @@ export async function generateAIReply({ messages, signal } = {}) {
   if (!content) throw new Error('AI returned an empty response.');
   return { text: content, provider: 'openai' };
 }
+

@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Camera, CheckCircle2, Clock, Pencil, Pill, Plus, Trash2, XCircle } from 'lucide-react';
+import { Camera, CheckCircle2, Clock, Pencil, Pill, Plus, Trash2, Upload, XCircle } from 'lucide-react';
 import { getItem, storageKeys, subscribe, updateMedicines, appendActivity } from '../../utils/storageUtils.js';
 import { toast, notifyBrowser } from '../../utils/notificationUtils.js';
 import { speak } from '../../utils/speechUtils.js';
 import { fileToResizedDataUrl } from '../../utils/deviceActions.js';
 import { useI18n } from '../../i18n/i18n.js';
+import PrescriptionScanner from '../medicine/PrescriptionScanner.jsx';
 
 function parseTimeToTodayISO(timeHHMM) {
   const [hh, mm] = timeHHMM.split(':').map((x) => Number(x));
@@ -27,6 +28,127 @@ function statusForMed(m) {
   return 'pending';
 }
 
+const DEFAULT_TIMES = {
+  morning: '08:00',
+  afternoon: '13:00',
+  evening: '20:00',
+  bedtime: '22:00',
+  beforeBreakfast: '07:00',
+  afterBreakfast: '08:30',
+  beforeLunch: '12:30',
+  afterLunch: '13:30',
+  beforeDinner: '19:00',
+  afterDinner: '20:30'
+};
+
+function normalizeLine(line) {
+  return String(line || '').replace(/\s+/g, ' ').trim();
+}
+
+function detectMealTiming(line) {
+  const src = line.toLowerCase();
+  if (/before\s*(food|meal|breakfast|lunch|dinner)|\b(ac|bf)\b/.test(src)) return 'before';
+  if (/after\s*(food|meal|breakfast|lunch|dinner)|\b(pc|af)\b/.test(src)) return 'after';
+  return '';
+}
+
+function detectDosePattern(line) {
+  const match = line.match(/\b([01])\s*[-/\s]\s*([01])\s*[-/\s]\s*([01])\b/);
+  if (!match) return null;
+  const [m, a, e] = match.slice(1).map((n) => Number(n));
+  return { morning: m, afternoon: a, evening: e };
+}
+
+function detectFrequency(line) {
+  const src = line.toLowerCase();
+  if (/\bqid\b|four\s*times|4\s*times/.test(src)) return 4;
+  if (/\btid\b|thrice|3\s*times/.test(src)) return 3;
+  if (/\bbd\b|twice|2\s*times/.test(src)) return 2;
+  if (/\bod\b|once\s*daily|1\s*time/.test(src)) return 1;
+  return null;
+}
+
+function extractMedName(line) {
+  const cleaned = normalizeLine(line)
+    .replace(/\b(\d+(\.\d+)?\s*(mg|ml|mcg|g|iu|tab|tabs|tablet|tablets|cap|caps|capsule|syrup|drop|drops))\b/gi, ' ')
+    .replace(/\b(od|bd|tid|qid|hs|sos|ac|pc|before|after|morning|noon|evening|night|bedtime|daily|once|twice|thrice|times)\b/gi, ' ')
+    .replace(/[\d\-\/]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!cleaned) return '';
+  const parts = cleaned.split(' ').filter(Boolean);
+  return parts.slice(0, 3).join(' ');
+}
+
+function buildTimesFromPattern(pattern, mealTiming) {
+  const times = [];
+  if (pattern.morning) times.push(mealTiming === 'before' ? DEFAULT_TIMES.beforeBreakfast : mealTiming === 'after' ? DEFAULT_TIMES.afterBreakfast : DEFAULT_TIMES.morning);
+  if (pattern.afternoon) times.push(mealTiming === 'before' ? DEFAULT_TIMES.beforeLunch : mealTiming === 'after' ? DEFAULT_TIMES.afterLunch : DEFAULT_TIMES.afternoon);
+  if (pattern.evening) times.push(mealTiming === 'before' ? DEFAULT_TIMES.beforeDinner : mealTiming === 'after' ? DEFAULT_TIMES.afterDinner : DEFAULT_TIMES.evening);
+  return times;
+}
+
+function buildTimesFromFrequency(freq, mealTiming) {
+  if (freq === 4) {
+    return [DEFAULT_TIMES.morning, DEFAULT_TIMES.afternoon, DEFAULT_TIMES.evening, DEFAULT_TIMES.bedtime];
+  }
+  if (freq === 3) {
+    return buildTimesFromPattern({ morning: 1, afternoon: 1, evening: 1 }, mealTiming);
+  }
+  if (freq === 2) {
+    return buildTimesFromPattern({ morning: 1, afternoon: 0, evening: 1 }, mealTiming);
+  }
+  if (freq === 1) {
+    return [mealTiming === 'before' ? DEFAULT_TIMES.beforeBreakfast : mealTiming === 'after' ? DEFAULT_TIMES.afterBreakfast : DEFAULT_TIMES.morning];
+  }
+  return [];
+}
+
+function parsePrescriptionText(rawText) {
+  const text = String(rawText || '').trim();
+  if (!text) return [];
+  const lines = text
+    .split(/\r?\n/)
+    .map(normalizeLine)
+    .filter(Boolean);
+
+  const meds = [];
+
+  lines.forEach((line) => {
+    const isCandidate = /(tab|tablet|cap|capsule|syrup|inj|drop|drops|mg|ml|mcg|g|od|bd|tid|qid|sos|before|after|morning|night|bedtime|\b[01]\s*[-/]\s*[01]\s*[-/]\s*[01]\b)/i.test(line);
+    if (!isCandidate) return;
+
+    const name = extractMedName(line);
+    if (!name) return;
+
+    const mealTiming = detectMealTiming(line);
+    const pattern = detectDosePattern(line);
+    const freq = detectFrequency(line);
+    let times = [];
+    if (pattern) times = buildTimesFromPattern(pattern, mealTiming);
+    if (!times.length && freq) times = buildTimesFromFrequency(freq, mealTiming);
+
+    if (!times.length) {
+      if (/night|bedtime|hs/i.test(line)) times = [DEFAULT_TIMES.bedtime];
+      else if (/morning/i.test(line)) times = [DEFAULT_TIMES.morning];
+      else if (/noon|afternoon/i.test(line)) times = [DEFAULT_TIMES.afternoon];
+      else if (/evening/i.test(line)) times = [DEFAULT_TIMES.evening];
+      else times = [mealTiming === 'before' ? DEFAULT_TIMES.beforeBreakfast : mealTiming === 'after' ? DEFAULT_TIMES.afterBreakfast : DEFAULT_TIMES.morning];
+    }
+
+    const instructions = mealTiming === 'before' ? 'Before food' : mealTiming === 'after' ? 'After food' : '';
+    meds.push({
+      name,
+      times,
+      purpose: '',
+      instructions,
+      mealTiming
+    });
+  });
+
+  return meds;
+}
+
 export default function MedicineBuddy() {
   const { ta } = useI18n();
   const [meds, setMeds] = useState(() => getItem(storageKeys.medicines, []));
@@ -36,6 +158,9 @@ export default function MedicineBuddy() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ time: '07:00', name: '', purpose: '', instructions: '', sideEffects: '', refillCount: '', photoDataUrl: '' });
   const [ocrBusy, setOcrBusy] = useState(false);
+  const [ocrText, setOcrText] = useState('');
+  const [parsedMeds, setParsedMeds] = useState([]);
+  const [showScanner, setShowScanner] = useState(false);
 
   useEffect(() => subscribe(storageKeys.medicines, setMeds), []);
 
@@ -55,7 +180,7 @@ export default function MedicineBuddy() {
           const last = m.lastNotifiedAtISO ? new Date(m.lastNotifiedAtISO).getTime() : 0;
           const recentlyNotified = last && now - last < 10 * 60 * 1000;
           if (mins <= 0 && mins >= -30 && !recentlyNotified) {
-            const msg = ta(`It's time for ${m.name}.`);
+            const msg = ta(`Hello! It's time to take ${m.name}. Please take it now.`);
             toast({ title: ta('Medicine reminder'), message: msg, type: 'warning' });
             notifyBrowser(ta('Medicine reminder'), { body: msg });
             speak(msg, { rate: 0.8 });
@@ -98,6 +223,8 @@ export default function MedicineBuddy() {
   const openAdd = () => {
     setEditingId(null);
     setForm({ time: '07:00', name: '', purpose: '', instructions: '', sideEffects: '', refillCount: '', photoDataUrl: '' });
+    setOcrText('');
+    setParsedMeds([]);
     setEditorOpen(true);
   };
 
@@ -112,6 +239,8 @@ export default function MedicineBuddy() {
       refillCount: m.refillCount ?? '',
       photoDataUrl: m.photoDataUrl || ''
     });
+    setOcrText('');
+    setParsedMeds([]);
     setEditorOpen(true);
   };
 
@@ -159,16 +288,18 @@ export default function MedicineBuddy() {
     try {
       const dataUrl = await fileToResizedDataUrl(file, { maxWidth: 1024, maxHeight: 1024, quality: 0.78, mime: 'image/jpeg' });
       setForm((s) => ({ ...s, photoDataUrl: dataUrl }));
+      setOcrText('');
+      setParsedMeds([]);
       toast({ title: ta('Photo added'), message: ta('Saved locally with this medicine.'), type: 'success' });
     } catch {
       toast({ title: ta('Camera'), message: ta('Could not read that image.'), type: 'warning' });
     }
   };
 
-  const runOcr = async () => {
+  const extractTextFromImage = async () => {
     if (!form.photoDataUrl) {
       toast({ title: ta('OCR'), message: ta('Add a photo first.'), type: 'info' });
-      return;
+      return '';
     }
     setOcrBusy(true);
     try {
@@ -177,28 +308,81 @@ export default function MedicineBuddy() {
       const res = await worker.recognize(form.photoDataUrl);
       await worker.terminate();
       const text = String(res?.data?.text || '').trim();
-      if (!text) {
-        toast({ title: ta('OCR'), message: ta('No readable text found. You can type manually.'), type: 'warning' });
-        return;
-      }
-
-      // Best-effort: pick a reasonable first line as name.
-      const lines = text
-        .split(/\r?\n/)
-        .map((l) => l.trim())
-        .filter(Boolean);
-      const first = lines[0] || '';
-      setForm((s) => ({
-        ...s,
-        name: s.name || first.slice(0, 60),
-        purpose: s.purpose || (lines.find((l) => /bp|pressure|sugar|diabetes|pain|fever|cold|cough/i.test(l)) || '')
-      }));
-      toast({ title: ta('OCR complete'), message: ta('Filled what I could. Please verify.'), type: 'success' });
+      return text;
     } catch {
       toast({ title: ta('OCR'), message: ta('OCR failed in this browser. You can still type manually.'), type: 'warning' });
+      return '';
     } finally {
       setOcrBusy(false);
     }
+  };
+
+  const runOcrFillForm = async () => {
+    const text = await extractTextFromImage();
+    if (!text) {
+      toast({ title: ta('OCR'), message: ta('No readable text found. You can type manually.'), type: 'warning' });
+      return;
+    }
+
+    setOcrText(text);
+    const lines = text
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+    const first = lines[0] || '';
+    setForm((s) => ({
+      ...s,
+      name: s.name || first.slice(0, 60),
+      purpose: s.purpose || (lines.find((l) => /bp|pressure|sugar|diabetes|pain|fever|cold|cough/i.test(l)) || '')
+    }));
+    toast({ title: ta('OCR complete'), message: ta('Filled what I could. Please verify.'), type: 'success' });
+  };
+
+  const scanPrescription = async () => {
+    const text = await extractTextFromImage();
+    if (!text) {
+      toast({ title: ta('Prescription scan'), message: ta('No readable text found. Please try a clearer image.'), type: 'warning' });
+      return;
+    }
+    setOcrText(text);
+    const parsed = parsePrescriptionText(text);
+    setParsedMeds(parsed);
+    if (!parsed.length) {
+      toast({ title: ta('Prescription scan'), message: ta('I could not confidently extract medicines. You can edit manually.'), type: 'warning' });
+      return;
+    }
+    toast({ title: ta('Prescription scan'), message: ta('Medicines extracted. Review and add to schedule.'), type: 'success' });
+  };
+
+  const addParsedToSchedule = () => {
+    if (!parsedMeds.length) {
+      toast({ title: ta('Prescription'), message: ta('Nothing to add yet.'), type: 'info' });
+      return;
+    }
+    updateMedicines((list) => {
+      const cur = list ?? [];
+      const next = [...cur];
+      parsedMeds.forEach((med) => {
+        (med.times || []).forEach((time) => {
+          next.unshift({
+            id: `med_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+            time,
+            name: med.name,
+            purpose: med.purpose || '',
+            instructions: med.instructions || '',
+            sideEffects: '',
+            refillCount: null,
+            photoDataUrl: form.photoDataUrl || '',
+            taken: false,
+            mealTiming: med.mealTiming || ''
+          });
+        });
+      });
+      return next;
+    });
+    appendActivity({ id: `act_${Date.now()}`, type: 'medicine', title: ta('Prescription added'), ts: new Date().toISOString(), detail: ta('Auto-added medicines from prescription.') });
+    toast({ title: ta('Prescription added'), message: ta('Medicines added to today’s schedule.'), type: 'success' });
+    setEditorOpen(false);
   };
 
   const countdownText = useMemo(() => {
@@ -210,6 +394,35 @@ export default function MedicineBuddy() {
 
   return (
     <div className="space-y-6">
+      {/* Prescription Scanner Button */}
+      <button 
+        onClick={() => setShowScanner(true)} 
+        style={{
+          width: '100%',
+          padding: 'clamp(1rem, 4vw, 1.25rem)',
+          fontSize: 'clamp(1.25rem, 5vw, 1.5rem)',
+          backgroundColor: '#6f42c1',
+          color: 'white',
+          border: 'none',
+          borderRadius: '12px',
+          cursor: 'pointer',
+          marginBottom: 'clamp(1rem, 3vw, 1.25rem)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 'clamp(0.625rem, 2vw, 0.75rem)',
+          boxShadow: '0 4px 15px rgba(111, 66, 193, 0.3)',
+          fontWeight: 'bold',
+          transition: 'transform 0.2s',
+          minHeight: '44px'
+        }}
+        onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
+        onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+      >
+        📷 {ta('Scan Prescription')}
+      </button>
+
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-3xl font-extrabold tracking-tight">{ta('Medicine Buddy')}</h2>
@@ -222,32 +435,33 @@ export default function MedicineBuddy() {
         >
           <Plus aria-hidden="true" /> {ta('Add Medicine')}
         </button>
-        <div className="rounded-card bg-white shadow-card p-4 ring-1 ring-slate-100">
+        <div className="rounded-card bg-white shadow-card p-4 border-2 border-slate-700">
           <div className="text-xs font-semibold text-slate-500">{ta('Compliance score')}</div>
           <div className="mt-1 text-3xl font-extrabold">{compliance}%</div>
           <div className="mt-1 text-sm text-slate-600">{ta("Based on today’s schedule")}</div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="rounded-card bg-white shadow-card ring-1 ring-slate-100 p-5 lg:col-span-2">
-          <h3 className="text-lg font-bold">{ta("Today’s Schedule")}</h3>
-          <div className="mt-4 space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: 'clamp(1rem, 3vw, 1.5rem)' }}>
+        <div className="rounded-card bg-white shadow-card border-2 border-slate-700 lg:col-span-2" style={{ padding: 'clamp(0.875rem, 3vw, 1.25rem)' }}>
+          <h3 className="font-bold" style={{ fontSize: 'clamp(1rem, 4vw, 1.125rem)' }}>{ta("Today's Schedule")}</h3>
+          <div className="mt-4" style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(0.625rem, 2vw, 0.75rem)' }}>
             {meds.map((m) => {
               const st = statusForMed(m);
               return (
-                <div key={m.id} className="rounded-xl border border-slate-200 bg-white p-4">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div key={m.id} className="rounded-xl border border-slate-200 bg-white" style={{ padding: 'clamp(0.75rem, 2.5vw, 1rem)' }}>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between" style={{ gap: 'clamp(0.625rem, 2vw, 0.75rem)' }}>
                     <div>
-                      <div className="text-2xl font-extrabold tracking-tight">{m.time}</div>
-                      <div className="mt-1 text-lg font-bold">{m.name}</div>
-                      <div className="text-sm text-slate-600">{ta('Purpose')}: {m.purpose}</div>
+                      <div className="font-extrabold tracking-tight" style={{ fontSize: 'clamp(1.25rem, 5vw, 1.5rem)' }}>{m.time}</div>
+                      <div className="mt-1 font-bold" style={{ fontSize: 'clamp(1rem, 4vw, 1.125rem)' }}>{m.name}</div>
+                      <div className="text-slate-600" style={{ fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>{ta('Purpose')}: {m.purpose}</div>
                     </div>
-                    <div className="flex flex-col gap-2 sm:items-end">
+                    <div className="flex flex-col sm:items-end" style={{ gap: 'clamp(0.375rem, 1.5vw, 0.5rem)' }}>
                       <StatusPill status={st} />
                       {!m.taken ? (
                         <button
-                          className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 font-bold text-white transition hover:brightness-110 focus:outline-none"
+                          className="inline-flex items-center justify-center rounded-lg bg-primary font-bold text-white transition hover:brightness-110 focus:outline-none"
+                          style={{ padding: 'clamp(0.5rem, 1.5vw, 0.625rem) clamp(0.75rem, 2.5vw, 1rem)', fontSize: 'clamp(0.875rem, 3.5vw, 1rem)', minHeight: '44px' }}
                           onClick={() => markTaken(m.id)}
                           aria-label={ta(`Mark ${m.name} as taken`)}
                         >
@@ -262,42 +476,42 @@ export default function MedicineBuddy() {
           </div>
         </div>
 
-        <div className="space-y-6">
-          <div className="rounded-card bg-white shadow-card ring-1 ring-slate-100 p-5">
-            <h3 className="text-lg font-bold">{ta('Reminder System')}</h3>
-            <div className="mt-3 rounded-xl bg-slate-50 p-3">
-              <div className="text-xs font-semibold text-slate-500">{ta('Next reminder')}</div>
-              <div className="mt-1 text-sm font-semibold text-slate-800">{countdownText}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(1rem, 3vw, 1.5rem)' }}>
+          <div className="rounded-card bg-white shadow-card ring-1 ring-slate-100" style={{ padding: 'clamp(0.875rem, 3vw, 1.25rem)' }}>
+            <h3 className="font-bold" style={{ fontSize: 'clamp(1rem, 4vw, 1.125rem)' }}>{ta('Reminder System')}</h3>
+            <div className="mt-3 rounded-xl bg-white border border-slate-600" style={{ padding: 'clamp(0.625rem, 2vw, 0.75rem)' }}>
+              <div className="font-semibold text-slate-500" style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.75rem)' }}>{ta('Next reminder')}</div>
+              <div className="mt-1 font-semibold text-slate-800" style={{ fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>{countdownText}</div>
             </div>
-            <div className="mt-3 text-sm text-slate-600">{ta('Reminders trigger automatically when a medicine is due.')}</div>
+            <div className="mt-3 text-slate-600" style={{ fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>{ta('Reminders trigger automatically when a medicine is due.')}</div>
           </div>
 
-          <div className="rounded-card bg-white shadow-card ring-1 ring-slate-100 p-5">
-            <h3 className="text-lg font-bold">{ta('Medicine Details')}</h3>
-            <div className="mt-4 space-y-3">
+          <div className="rounded-card bg-white shadow-card ring-1 ring-slate-100" style={{ padding: 'clamp(0.875rem, 3vw, 1.25rem)' }}>
+            <h3 className="font-bold" style={{ fontSize: 'clamp(1rem, 4vw, 1.125rem)' }}>{ta('Medicine Details')}</h3>
+            <div className="mt-4" style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(0.625rem, 2vw, 0.75rem)' }}>
               {meds.map((m) => (
-                <div key={`d_${m.id}`} className="rounded-xl bg-slate-50 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-slate-700 shadow">
-                      <Pill aria-hidden="true" />
+                <div key={`d_${m.id}`} className="rounded-xl bg-white border border-slate-600 shadow" style={{ padding: 'clamp(0.75rem, 2.5vw, 1rem)' }}>
+                  <div className="flex items-start justify-between" style={{ gap: 'clamp(0.625rem, 2vw, 0.75rem)' }}>
+                    <div className="flex items-start" style={{ gap: 'clamp(0.625rem, 2vw, 0.75rem)' }}>
+                    <div className="flex items-center justify-center rounded-xl bg-white border border-slate-600 text-slate-700 shadow" style={{ width: 'clamp(2.75rem, 9vw, 3rem)', height: 'clamp(2.75rem, 9vw, 3rem)' }}>
+                      {React.cloneElement(<Pill />, { 'aria-hidden': true, style: { width: '60%', height: '60%' } })}
                     </div>
                     <div className="min-w-0">
-                      <div className="font-extrabold text-slate-900">{m.name}</div>
-                      <div className="text-sm text-slate-600">{ta('Purpose')}: {m.purpose}</div>
-                      {m.instructions ? <div className="mt-1 text-sm text-slate-600">{ta('Instructions')}: {m.instructions}</div> : null}
-                      {m.sideEffects ? <div className="text-sm text-slate-600">{ta('Side effects')}: {m.sideEffects}</div> : null}
-                      {Number.isFinite(m.refillCount) ? <div className="mt-1 text-sm font-semibold text-slate-800">{ta('Refill')}: {m.refillCount} {ta('remaining')}</div> : null}
-                      {m.photoDataUrl ? <img className="mt-2 h-20 w-auto rounded-lg border border-slate-200" src={m.photoDataUrl} alt={ta('Medicine photo')} /> : null}
+                      <div className="font-extrabold text-slate-900" style={{ fontSize: 'clamp(0.875rem, 3.5vw, 1rem)' }}>{m.name}</div>
+                      <div className="text-slate-600" style={{ fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>{ta('Purpose')}: {m.purpose}</div>
+                      {m.instructions ? <div className="mt-1 text-slate-600" style={{ fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>{ta('Instructions')}: {m.instructions}</div> : null}
+                      {m.sideEffects ? <div className="text-slate-600" style={{ fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>{ta('Side effects')}: {m.sideEffects}</div> : null}
+                      {Number.isFinite(m.refillCount) ? <div className="mt-1 font-semibold text-slate-800" style={{ fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>{ta('Refill')}: {m.refillCount} {ta('remaining')}</div> : null}
+                      {m.photoDataUrl ? <img className="mt-2 rounded-lg border border-slate-200" style={{ height: 'clamp(4rem, 15vw, 5rem)', width: 'auto' }} src={m.photoDataUrl} alt={ta('Medicine photo')} /> : null}
                     </div>
                     </div>
 
-                    <div className="flex shrink-0 flex-col gap-2">
-                      <button className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-extrabold text-white" onClick={() => openEdit(m)} aria-label={ta(`Edit ${m.name}`)}>
-                        <Pencil aria-hidden="true" className="h-4 w-4" /> {ta('Edit')}
+                    <div className="flex shrink-0 flex-col" style={{ gap: 'clamp(0.375rem, 1.5vw, 0.5rem)' }}>
+                      <button className="inline-flex items-center justify-center rounded-lg bg-slate-900 font-extrabold text-white" style={{ padding: 'clamp(0.5rem, 1.5vw, 0.625rem) clamp(0.625rem, 2vw, 0.75rem)', fontSize: 'clamp(0.75rem, 3vw, 0.875rem)', gap: 'clamp(0.375rem, 1.5vw, 0.5rem)', minHeight: '44px' }} onClick={() => openEdit(m)} aria-label={ta(`Edit ${m.name}`)}>
+                        {React.cloneElement(<Pencil />, { 'aria-hidden': true, style: { width: 'clamp(0.75rem, 3vw, 1rem)', height: 'clamp(0.75rem, 3vw, 1rem)' } })} {ta('Edit')}
                       </button>
-                      <button className="inline-flex items-center justify-center gap-2 rounded-lg bg-danger px-3 py-2 text-sm font-extrabold text-white" onClick={() => deleteMedicine(m.id)} aria-label={ta(`Delete ${m.name}`)}>
-                        <Trash2 aria-hidden="true" className="h-4 w-4" /> {ta('Delete')}
+                      <button className="inline-flex items-center justify-center rounded-lg bg-danger font-extrabold text-white" style={{ padding: 'clamp(0.5rem, 1.5vw, 0.625rem) clamp(0.625rem, 2vw, 0.75rem)', fontSize: 'clamp(0.75rem, 3vw, 0.875rem)', gap: 'clamp(0.375rem, 1.5vw, 0.5rem)', minHeight: '44px' }} onClick={() => deleteMedicine(m.id)} aria-label={ta(`Delete ${m.name}`)}>
+                        {React.cloneElement(<Trash2 />, { 'aria-hidden': true, style: { width: 'clamp(0.75rem, 3vw, 1rem)', height: 'clamp(0.75rem, 3vw, 1rem)' } })} {ta('Delete')}
                       </button>
                     </div>
                   </div>
@@ -309,62 +523,78 @@ export default function MedicineBuddy() {
       </div>
 
       {editorOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4" role="dialog" aria-label={ta('Medicine editor dialog')}>
-          <div className="w-full max-w-2xl rounded-card bg-white shadow-card p-6">
-            <div className="flex items-center justify-between gap-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60" style={{ padding: 'clamp(0.75rem, 2.5vw, 1rem)' }} role="dialog" aria-label={ta('Medicine editor dialog')}>
+          <div className="w-full max-w-2xl rounded-card bg-white border-2 border-slate-700 shadow-card" style={{ padding: 'clamp(1rem, 3.5vw, 1.5rem)' }}>
+            <div className="flex items-center justify-between" style={{ gap: 'clamp(0.625rem, 2vw, 0.75rem)' }}>
               <div>
-                <div className="text-xl font-extrabold">{editingId ? ta('Edit Medicine') : ta('Add Medicine')}</div>
-                <div className="mt-1 text-slate-600">{ta('Saved locally. Use camera to capture a medicine strip and fill details.')}</div>
+                <div className="font-extrabold" style={{ fontSize: 'clamp(1.125rem, 4.5vw, 1.25rem)' }}>{editingId ? ta('Edit Medicine') : ta('Add Medicine')}</div>
+                <div className="mt-1 text-slate-600" style={{ fontSize: 'clamp(0.875rem, 3.5vw, 1rem)' }}>{ta('Saved locally. Use camera to capture a medicine strip and fill details.')}</div>
               </div>
-              <button className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-extrabold text-slate-900" onClick={() => setEditorOpen(false)} aria-label={ta('Close')}>
+              <button className="rounded-lg bg-slate-100 font-extrabold text-slate-900" style={{ padding: 'clamp(0.5rem, 1.5vw, 0.625rem) clamp(0.625rem, 2vw, 0.75rem)', fontSize: 'clamp(0.75rem, 3vw, 0.875rem)', minHeight: '44px' }} onClick={() => setEditorOpen(false)} aria-label={ta('Close')}>
                 {ta('Close')}
               </button>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2" style={{ gap: 'clamp(0.625rem, 2vw, 0.75rem)' }}>
               <label className="block">
-                <div className="text-xs font-semibold text-slate-500">{ta('Time (HH:MM)')}</div>
-                <input className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" value={form.time} onChange={(e) => setForm((s) => ({ ...s, time: e.target.value }))} aria-label={ta('Medicine time')} />
-              </label>
-              <label className="block">
-                <div className="text-xs font-semibold text-slate-500">{ta('Medicine name')}</div>
-                <input className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" value={form.name} onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))} aria-label={ta('Medicine name')} />
-              </label>
-              <label className="block md:col-span-2">
-                <div className="text-xs font-semibold text-slate-500">{ta('Purpose')}</div>
-                <input className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" value={form.purpose} onChange={(e) => setForm((s) => ({ ...s, purpose: e.target.value }))} aria-label={ta('Purpose')} />
-              </label>
-              <label className="block md:col-span-2">
-                <div className="text-xs font-semibold text-slate-500">{ta('Instructions')}</div>
-                <input className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" value={form.instructions} onChange={(e) => setForm((s) => ({ ...s, instructions: e.target.value }))} aria-label={ta('Instructions')} />
-              </label>
-              <label className="block md:col-span-2">
-                <div className="text-xs font-semibold text-slate-500">{ta('Side effects')}</div>
-                <input className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" value={form.sideEffects} onChange={(e) => setForm((s) => ({ ...s, sideEffects: e.target.value }))} aria-label={ta('Side effects')} />
+                <div className="font-semibold text-slate-500" style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.75rem)' }}>{ta('Time (HH:MM)')}</div>
+                <input className="mt-1 w-full rounded-lg border border-slate-200" style={{ padding: 'clamp(0.5rem, 1.5vw, 0.625rem) clamp(0.625rem, 2vw, 0.75rem)', fontSize: 'clamp(0.875rem, 3.5vw, 1rem)', minHeight: '44px' }} value={form.time} onChange={(e) => setForm((s) => ({ ...s, time: e.target.value }))} aria-label={ta('Medicine time')} />
               </label>
               <label className="block">
-                <div className="text-xs font-semibold text-slate-500">{ta('Refill count')}</div>
-                <input className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2" inputMode="numeric" value={form.refillCount} onChange={(e) => setForm((s) => ({ ...s, refillCount: e.target.value }))} aria-label={ta('Refill count')} />
+                <div className="font-semibold text-slate-500" style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.75rem)' }}>{ta('Medicine name')}</div>
+                <input className="mt-1 w-full rounded-lg border border-slate-200" style={{ padding: 'clamp(0.5rem, 1.5vw, 0.625rem) clamp(0.625rem, 2vw, 0.75rem)', fontSize: 'clamp(0.875rem, 3.5vw, 1rem)', minHeight: '44px' }} value={form.name} onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))} aria-label={ta('Medicine name')} />
+              </label>
+              <label className="block md:col-span-2">
+                <div className="font-semibold text-slate-500" style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.75rem)' }}>{ta('Purpose')}</div>
+                <input className="mt-1 w-full rounded-lg border border-slate-200" style={{ padding: 'clamp(0.5rem, 1.5vw, 0.625rem) clamp(0.625rem, 2vw, 0.75rem)', fontSize: 'clamp(0.875rem, 3.5vw, 1rem)', minHeight: '44px' }} value={form.purpose} onChange={(e) => setForm((s) => ({ ...s, purpose: e.target.value }))} aria-label={ta('Purpose')} />
+              </label>
+              <label className="block md:col-span-2">
+                <div className="font-semibold text-slate-500" style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.75rem)' }}>{ta('Instructions')}</div>
+                <input className="mt-1 w-full rounded-lg border border-slate-200" style={{ padding: 'clamp(0.5rem, 1.5vw, 0.625rem) clamp(0.625rem, 2vw, 0.75rem)', fontSize: 'clamp(0.875rem, 3.5vw, 1rem)', minHeight: '44px' }} value={form.instructions} onChange={(e) => setForm((s) => ({ ...s, instructions: e.target.value }))} aria-label={ta('Instructions')} />
+              </label>
+              <label className="block md:col-span-2">
+                <div className="font-semibold text-slate-500" style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.75rem)' }}>{ta('Side effects')}</div>
+                <input className="mt-1 w-full rounded-lg border border-slate-200" style={{ padding: 'clamp(0.5rem, 1.5vw, 0.625rem) clamp(0.625rem, 2vw, 0.75rem)', fontSize: 'clamp(0.875rem, 3.5vw, 1rem)', minHeight: '44px' }} value={form.sideEffects} onChange={(e) => setForm((s) => ({ ...s, sideEffects: e.target.value }))} aria-label={ta('Side effects')} />
+              </label>
+              <label className="block">
+                <div className="font-semibold text-slate-500" style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.75rem)' }}>{ta('Refill count')}</div>
+                <input className="mt-1 w-full rounded-lg border border-slate-200" style={{ padding: 'clamp(0.5rem, 1.5vw, 0.625rem) clamp(0.625rem, 2vw, 0.75rem)', fontSize: 'clamp(0.875rem, 3.5vw, 1rem)', minHeight: '44px' }} inputMode="numeric" value={form.refillCount} onChange={(e) => setForm((s) => ({ ...s, refillCount: e.target.value }))} aria-label={ta('Refill count')} />
               </label>
 
-              <div className="rounded-xl border border-slate-200 p-3 md:col-span-2">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-sm font-extrabold text-slate-900">{ta('Medicine strip photo')}</div>
-                  <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-extrabold text-white">
-                    <Camera aria-hidden="true" className="h-4 w-4" /> {ta('Capture')}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      className="hidden"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f) attachPhotoFromFile(f);
-                        e.target.value = '';
-                      }}
-                      aria-label={ta('Capture medicine photo')}
-                    />
-                  </label>
+              <div className="rounded-xl border border-slate-200 md:col-span-2" style={{ padding: 'clamp(0.625rem, 2vw, 0.75rem)' }}>
+                <div className="flex flex-wrap items-center justify-between" style={{ gap: 'clamp(0.625rem, 2vw, 0.75rem)' }}>
+                  <div className="font-extrabold text-slate-900" style={{ fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>{ta('Prescription / medicine photo')}</div>
+                  <div className="flex flex-wrap" style={{ gap: 'clamp(0.375rem, 1.5vw, 0.5rem)' }}>
+                    <label className="inline-flex cursor-pointer items-center justify-center rounded-lg bg-slate-900 font-extrabold text-white" style={{ padding: 'clamp(0.5rem, 1.5vw, 0.625rem) clamp(0.625rem, 2vw, 0.75rem)', fontSize: 'clamp(0.75rem, 3vw, 0.875rem)', gap: 'clamp(0.375rem, 1.5vw, 0.5rem)', minHeight: '44px' }}>
+                      {React.cloneElement(<Camera />, { 'aria-hidden': true, style: { width: 'clamp(0.75rem, 3vw, 1rem)', height: 'clamp(0.75rem, 3vw, 1rem)' } })} {ta('Camera')}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) attachPhotoFromFile(f);
+                          e.target.value = '';
+                        }}
+                        aria-label={ta('Capture prescription photo')}
+                      />
+                    </label>
+                    <label className="inline-flex cursor-pointer items-center justify-center rounded-lg bg-slate-100 font-extrabold text-slate-900" style={{ padding: 'clamp(0.5rem, 1.5vw, 0.625rem) clamp(0.625rem, 2vw, 0.75rem)', fontSize: 'clamp(0.75rem, 3vw, 0.875rem)', gap: 'clamp(0.375rem, 1.5vw, 0.5rem)', minHeight: '44px' }}>
+                      {React.cloneElement(<Upload />, { 'aria-hidden': true, style: { width: 'clamp(0.75rem, 3vw, 1rem)', height: 'clamp(0.75rem, 3vw, 1rem)' } })} {ta('Upload')}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) attachPhotoFromFile(f);
+                          e.target.value = '';
+                        }}
+                        aria-label={ta('Upload prescription photo')}
+                      />
+                    </label>
+                  </div>
                 </div>
                 {form.photoDataUrl ? (
                   <div className="mt-3">
@@ -373,13 +603,42 @@ export default function MedicineBuddy() {
                       <button className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-extrabold text-slate-900" onClick={() => setForm((s) => ({ ...s, photoDataUrl: '' }))} aria-label={ta('Remove photo')}>
                         {ta('Remove photo')}
                       </button>
-                      <button className="rounded-lg bg-primary px-3 py-2 text-sm font-extrabold text-white" onClick={runOcr} disabled={ocrBusy} aria-label={ta('Extract text from photo')}>
+                      <button className="rounded-lg bg-primary px-3 py-2 text-sm font-extrabold text-white" onClick={runOcrFillForm} disabled={ocrBusy} aria-label={ta('Extract text from photo')}>
                         {ocrBusy ? ta('Reading…') : ta('Extract text (offline OCR)')}
                       </button>
+                      <button className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-extrabold text-white" onClick={scanPrescription} disabled={ocrBusy} aria-label={ta('Scan prescription and auto add medicines')}>
+                        {ocrBusy ? ta('Scanning…') : ta('Scan prescription')}
+                      </button>
                     </div>
+                    {parsedMeds.length ? (
+                      <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
+                        <div className="text-sm font-extrabold text-slate-900">{ta('Auto-detected medicines')}</div>
+                        <ul className="mt-2 space-y-2 text-sm text-slate-700">
+                          {parsedMeds.map((m, idx) => (
+                            <li key={`pm_${idx}`}>
+                              <span className="font-semibold">{m.name}</span> • {m.times.join(', ')} {m.instructions ? `• ${ta(m.instructions)}` : ''}
+                            </li>
+                          ))}
+                        </ul>
+                        {ocrText ? (
+                          <details className="mt-3">
+                            <summary className="cursor-pointer text-sm font-semibold text-slate-700">{ta('View extracted text')}</summary>
+                            <pre className="mt-2 max-h-40 overflow-auto rounded-lg bg-white border border-slate-600 p-2 text-xs text-slate-700">{ocrText}</pre>
+                          </details>
+                        ) : null}
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <button className="rounded-lg bg-primary px-3 py-2 text-sm font-extrabold text-white" onClick={addParsedToSchedule} aria-label={ta('Add detected medicines to schedule')}>
+                            {ta('Add to schedule')}
+                          </button>
+                          <button className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-extrabold text-slate-900" onClick={() => setParsedMeds([])} aria-label={ta('Clear detected medicines')}>
+                            {ta('Clear')}
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 ) : (
-                  <div className="mt-2 text-sm text-slate-600">{ta('Use camera to capture the tablet strip, then optionally extract text.')}</div>
+                  <div className="mt-2 text-sm text-slate-600">{ta('Upload or capture a prescription to auto-fill and schedule medicines.')}</div>
                 )}
               </div>
             </div>
@@ -392,6 +651,17 @@ export default function MedicineBuddy() {
           </div>
         </div>
       ) : null}
+
+      {/* Prescription Scanner Component */}
+      {showScanner && (
+        <PrescriptionScanner 
+          onClose={() => setShowScanner(false)}
+          onAnalysisComplete={(medicines) => {
+            // This will be implemented in next prompt
+            setShowScanner(false);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -399,17 +669,18 @@ export default function MedicineBuddy() {
 function StatusPill({ status }) {
   const { ta } = useI18n();
   const map = {
-    taken: { bg: 'bg-success/10', fg: 'text-success', icon: <CheckCircle2 className="h-4 w-4" aria-hidden="true" />, label: ta('Taken') },
-    missed: { bg: 'bg-danger/10', fg: 'text-danger', icon: <XCircle className="h-4 w-4" aria-hidden="true" />, label: ta('Missed') },
-    due: { bg: 'bg-warning/10', fg: 'text-warning', icon: <Clock className="h-4 w-4" aria-hidden="true" />, label: ta('Due Now') },
-    pending: { bg: 'bg-slate-100', fg: 'text-slate-700', icon: <Clock className="h-4 w-4" aria-hidden="true" />, label: ta('Pending') }
+    taken: { bg: 'bg-success/10', fg: 'text-success', icon: React.cloneElement(<CheckCircle2 />, { 'aria-hidden': true, style: { width: 'clamp(0.75rem, 3vw, 1rem)', height: 'clamp(0.75rem, 3vw, 1rem)' } }), label: ta('Taken') },
+    missed: { bg: 'bg-danger/10', fg: 'text-danger', icon: React.cloneElement(<XCircle />, { 'aria-hidden': true, style: { width: 'clamp(0.75rem, 3vw, 1rem)', height: 'clamp(0.75rem, 3vw, 1rem)' } }), label: ta('Missed') },
+    due: { bg: 'bg-warning/10', fg: 'text-warning', icon: React.cloneElement(<Clock />, { 'aria-hidden': true, style: { width: 'clamp(0.75rem, 3vw, 1rem)', height: 'clamp(0.75rem, 3vw, 1rem)' } }), label: ta('Due Now') },
+    pending: { bg: 'bg-slate-100', fg: 'text-slate-700', icon: React.cloneElement(<Clock />, { 'aria-hidden': true, style: { width: 'clamp(0.75rem, 3vw, 1rem)', height: 'clamp(0.75rem, 3vw, 1rem)' } }), label: ta('Pending') }
   };
 
   const s = map[status] ?? map.pending;
   return (
-    <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-extrabold ${s.bg} ${s.fg}`} aria-label={`${ta('Medicine status')}: ${s.label}`}>
+    <span className={`inline-flex items-center rounded-full font-extrabold ${s.bg} ${s.fg}`} style={{ gap: 'clamp(0.375rem, 1.5vw, 0.5rem)', padding: 'clamp(0.25rem, 1vw, 0.375rem) clamp(0.625rem, 2vw, 0.75rem)', fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }} aria-label={`${ta('Medicine status')}: ${s.label}`}>
       {s.icon}
       {s.label}
     </span>
   );
 }
+

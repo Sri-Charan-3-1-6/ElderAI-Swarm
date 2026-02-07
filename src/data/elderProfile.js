@@ -19,3 +19,4 @@ export const elderProfile = {
   medicalHistory: ['Hypertension', 'Type 2 Diabetes'],
   allergies: ['Penicillin']
 };
+

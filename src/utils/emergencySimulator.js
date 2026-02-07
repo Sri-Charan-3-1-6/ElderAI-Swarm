@@ -117,3 +117,4 @@ export function buildStaticMapDataUri({ label = 'Home', nearest = 'Nearest hospi
 
   return `data:image/svg+xml,${encoded}`;
 }
+

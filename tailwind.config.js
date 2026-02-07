@@ -15,6 +15,9 @@ export default {
         },
         danger: {
           DEFAULT: '#EF4444'
+        },
+        'app-bg': {
+          DEFAULT: '#f19066'
         }
       },
       borderRadius: {

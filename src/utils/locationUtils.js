@@ -65,3 +65,4 @@ export function startLiveLocationTracking({ onUpdate, onError, options } = {}) {
     }
   };
 }
+

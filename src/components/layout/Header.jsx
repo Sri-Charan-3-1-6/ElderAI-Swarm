@@ -1,102 +1,136 @@
 import React, { useEffect, useState } from 'react';
-import { HeartPulse, Shield, Users } from 'lucide-react';
-import Navigation from './Navigation.jsx';
-import StatusIndicator from '../shared/StatusIndicator.jsx';
+import { ArrowLeft, Cog, Languages } from 'lucide-react';
+import { colors, fonts } from '../../styles/theme.js';
 import { getItem, storageKeys, subscribe } from '../../utils/storageUtils.js';
 import { useI18n } from '../../i18n/i18n.js';
 
-export default function Header({ highContrast = false, onToggleContrast }) {
-  const { t, lang, setLang } = useI18n();
-  const [status, setStatus] = useState(() => getItem(storageKeys.appStatus, { online: true, lastActiveISO: new Date().toISOString() }));
-  const [online, setOnline] = useState(() => (typeof navigator !== 'undefined' ? navigator.onLine : true));
+export default function Header({ currentPage, onBack, showBack = false, onSettings }) {
+  const [now, setNow] = useState(new Date());
+  const [name, setName] = useState('Lakshmi Amma');
+  const { lang, setLang, ta } = useI18n();
 
   useEffect(() => {
-    return subscribe(storageKeys.appStatus, setStatus);
+    const id = window.setInterval(() => setNow(new Date()), 1000 * 30);
+    return () => window.clearInterval(id);
   }, []);
 
   useEffect(() => {
-    const on = () => setOnline(true);
-    const off = () => setOnline(false);
-    window.addEventListener('online', on);
-    window.addEventListener('offline', off);
-    return () => {
-      window.removeEventListener('online', on);
-      window.removeEventListener('offline', off);
-    };
-  }, []);
+    const profile = getItem(storageKeys.profile, null);
+    if (profile?.name) setName(profile.name);
 
-  const lastActive = new Date(status.lastActiveISO);
+    const unsubscribe = subscribe(storageKeys.profile, (next) => {
+      if (next?.name) {
+        setName(next.name);
+      }
+    });
+
+    return () => unsubscribe?.();
+  }, []);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/80 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Shield aria-hidden="true" />
-          </div>
+    <header className="sticky top-0 z-40 border-b border-white/20 bg-white/70 backdrop-blur-xl shadow-lg">
+      <div className="mx-auto flex max-w-5xl items-center justify-between" style={{ padding: 'clamp(0.5rem, 2vw, 0.75rem) clamp(0.75rem, 3vw, 1rem)' }}>
+        <div className="flex items-center" style={{ gap: 'clamp(0.5rem, 2vw, 0.625rem)' }}>
+          {showBack ? (
+            <button
+              type="button"
+              onClick={onBack}
+              className="rounded-full bg-white/60 backdrop-blur-md border border-white/30 text-slate-800 hover:bg-white/80 shadow-md transition-all"
+              style={{ 
+                padding: 'clamp(0.375rem, 1.5vw, 0.5rem)',
+                minWidth: 'clamp(36px, 10vw, 44px)',
+                minHeight: 'clamp(36px, 10vw, 44px)'
+              }}
+              aria-label="Go back"
+            >
+              <ArrowLeft style={{ width: 'clamp(1.25rem, 5vw, 1.5rem)', height: 'clamp(1.25rem, 5vw, 1.5rem)' }} />
+            </button>
+          ) : null}
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-extrabold tracking-tight">{t('app.title')}</span>
-              <span className="hidden items-center gap-2 text-sm text-slate-600 sm:flex">
-                <StatusIndicator status={status.online ? 'active' : 'inactive'} />
-                <span>{status.online ? t('status.online') : t('status.offline')}</span>
-              </span>
+            <div style={{ fontSize: 'clamp(1.25rem, 5vw, 1.875rem)', fontWeight: '900', color: '#0f172a', letterSpacing: '-0.025em', lineHeight: 1.2 }}>
+              ElderAI Swarm
             </div>
-            <div className="hidden text-xs text-slate-500 sm:block">
-              {t('status.lastActive')} {lastActive.toLocaleString([], { hour: '2-digit', minute: '2-digit' })}
+            <div style={{ fontSize: 'clamp(0.875rem, 3vw, 1rem)', fontWeight: '700', color: '#334155', lineHeight: 1.3 }}>
+              {ta('Hello')}, {name}! 😊
+            </div>
+            <div style={{ fontSize: 'clamp(0.7rem, 2.5vw, 0.75rem)', fontWeight: '600', color: '#64748b', textTransform: 'capitalize', lineHeight: 1.2 }}>
+              {ta(labelForPage(currentPage))}
             </div>
           </div>
         </div>
-
-        <div className="hidden items-center gap-3 md:flex">
-          {!online ? (
-            <div className="flex items-center gap-2 rounded-xl bg-warning/10 px-3 py-2 text-sm font-semibold text-warning">
-              <span className="h-2 w-2 rounded-full bg-warning" aria-hidden="true" /> {t('status.offline')}
-            </div>
-          ) : null}
-
-          <label className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700">
-            <span className="font-semibold">{t('header.language')}</span>
+        <div className="flex items-center text-right" style={{ gap: 'clamp(0.5rem, 2vw, 0.75rem)' }}>
+          <label className="hidden items-center rounded-lg border border-white/30 bg-white/60 backdrop-blur-md shadow-md sm:flex" style={{ 
+            gap: 'clamp(0.375rem, 1.5vw, 0.5rem)',
+            padding: 'clamp(0.25rem, 1.5vw, 0.375rem) clamp(0.5rem, 2vw, 0.625rem)',
+            fontSize: 'clamp(0.7rem, 2.5vw, 0.75rem)',
+            fontWeight: '600',
+            color: '#334155'
+          }}>
+            <Languages style={{ width: 'clamp(0.875rem, 3vw, 1rem)', height: 'clamp(0.875rem, 3vw, 1rem)' }} />
             <select
-              className="rounded-lg bg-white px-2 py-1 text-sm font-semibold text-slate-800 ring-1 ring-slate-200 focus:outline-none"
+              className="rounded border border-white/30 bg-white/60 backdrop-blur-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              style={{ 
+                padding: 'clamp(0.125rem, 1vw, 0.25rem) clamp(0.25rem, 1.5vw, 0.375rem)',
+                fontSize: 'clamp(0.7rem, 2.5vw, 0.75rem)',
+                fontWeight: '700'
+              }}
               value={lang}
               onChange={(e) => setLang(e.target.value)}
-              aria-label={t('header.language')}
+              aria-label={ta('Choose language')}
             >
               <option value="en">English</option>
-              <option value="te">తెలుగు (Telugu)</option>
-              <option value="ta">தமிழ் (Tamil)</option>
-              <option value="hi">हिन्दी (Hindi)</option>
-              <option value="kn">ಕನ್ನಡ (Kannada)</option>
-              <option value="ml">മലയാളം (Malayalam)</option>
-              <option value="mr">मराठी (Marathi)</option>
-              <option value="bn">বাংলা (Bengali)</option>
+              <option value="hi">Hindi</option>
+              <option value="ta">Tamil</option>
+              <option value="te">Telugu</option>
+              <option value="kn">Kannada</option>
+              <option value="ml">Malayalam</option>
+              <option value="mr">Marathi</option>
+              <option value="bn">Bengali</option>
             </select>
           </label>
-
+          <div style={{ fontSize: 'clamp(0.7rem, 2.5vw, 0.75rem)', fontWeight: '600', color: '#475569' }}>
+            <div style={{ fontSize: 'clamp(0.65rem, 2vw, 0.6875rem)' }}>{now.toLocaleDateString()}</div>
+            <div style={{ fontSize: 'clamp(0.8rem, 3vw, 0.875rem)', color: '#334155', fontWeight: '700' }}>
+              {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          </div>
           <button
-            className={
-              'rounded-xl px-3 py-2 text-sm font-semibold transition focus:outline-none ' +
-              (highContrast ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-800 hover:bg-slate-200')
-            }
-            onClick={onToggleContrast}
-            aria-label={t('header.contrast')}
             type="button"
+            onClick={onSettings}
+            className="rounded-full bg-white/60 backdrop-blur-md border border-white/30 text-slate-800 hover:bg-white/80 shadow-md transition-all"
+            style={{ 
+              padding: 'clamp(0.375rem, 1.5vw, 0.5rem)',
+              minWidth: 'clamp(36px, 10vw, 44px)',
+              minHeight: 'clamp(36px, 10vw, 44px)'
+            }}
+            aria-label="Settings"
           >
-            {t('header.contrast')}
+            <Cog style={{ width: 'clamp(1.25rem, 5vw, 1.75rem)', height: 'clamp(1.25rem, 5vw, 1.75rem)' }} />
           </button>
-          <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700">
-            <Users className="h-4 w-4" aria-hidden="true" />
-            <span className="font-semibold">{t('header.familyView')}</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-700">
-            <HeartPulse className="h-4 w-4 text-success" aria-hidden="true" />
-            <span className="font-semibold">{t('header.offlineFirst')}</span>
-          </div>
         </div>
-
-        <Navigation />
       </div>
     </header>
   );
 }
+
+function labelForPage(page) {
+  switch (page) {
+    case 'medicine':
+      return 'Medicine Buddy';
+    case 'health':
+      return 'Health Guardian';
+    case 'emergency':
+      return 'Emergency Responder';
+    case 'life':
+      return 'Life Coordinator';
+    case 'companion':
+      return 'Daily Companion';
+    case 'settings':
+      return 'Settings & Help';
+    case 'onboarding':
+      return 'Welcome';
+    default:
+      return 'Home';
+  }
+}
+

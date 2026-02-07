@@ -191,3 +191,4 @@ export function sleepBreakdown(sleepSeries) {
     { name: 'REM', value: round(rem, 1) }
   ];
 }
+

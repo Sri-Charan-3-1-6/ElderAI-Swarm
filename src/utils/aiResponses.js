@@ -99,3 +99,4 @@ export function createRuleBasedAI({ memorySize = 5 } = {}) {
 
   return { respond, remember, getMemory: () => [...memory] };
 }
+

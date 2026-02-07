@@ -86,3 +86,4 @@ export function startRecognition({ lang = 'en-IN', continuous = false, onResult,
     return null;
   }
 }
+

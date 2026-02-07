@@ -266,3 +266,4 @@ export function countPrewrittenResponses() {
   const r = aiConversationBank.responses;
   return Object.values(r).reduce((sum, arr) => sum + arr.length, 0);
 }
+

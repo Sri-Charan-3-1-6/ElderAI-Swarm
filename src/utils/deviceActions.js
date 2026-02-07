@@ -155,3 +155,4 @@ export function downloadIcsFile(filename, { title, startISO, endISO, description
 
   downloadTextFile(filename || 'event.ics', ics, 'text/calendar;charset=utf-8');
 }
+

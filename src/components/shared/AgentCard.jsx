@@ -15,33 +15,34 @@ export default function AgentCard({
   const { ta } = useI18n();
 
   return (
-    <div className="rounded-card bg-white shadow-card ring-1 ring-slate-100 p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-50 text-slate-700">{icon}</div>
+    <div className="rounded-card bg-white shadow-card border-2 border-slate-700" style={{ padding: 'clamp(0.875rem, 3vw, 1.25rem)' }}>
+      <div className="flex items-start justify-between" style={{ gap: 'clamp(0.5rem, 2vw, 0.75rem)' }}>
+        <div className="flex items-center" style={{ gap: 'clamp(0.5rem, 2vw, 0.75rem)' }}>
+          <div className="flex items-center justify-center rounded-xl bg-white border border-slate-600 text-slate-700" style={{ height: 'clamp(2.5rem, 10vw, 3rem)', width: 'clamp(2.5rem, 10vw, 3rem)', minHeight: '44px', minWidth: '44px' }}>{icon}</div>
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-bold">{title}</h3>
+            <div className="flex items-center" style={{ gap: 'clamp(0.375rem, 1.5vw, 0.5rem)' }}>
+              <h3 className="font-bold" style={{ fontSize: 'clamp(1rem, 4vw, 1.125rem)' }}>{title}</h3>
               <StatusIndicator status={status} />
             </div>
-            {subtitle ? <div className="text-sm text-slate-600">{subtitle}</div> : null}
+            {subtitle ? <div className="text-slate-600" style={{ fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>{subtitle}</div> : null}
           </div>
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        <div className="rounded-xl bg-slate-50 p-3">
-          <div className="text-xs font-semibold text-slate-500">{metricLabel}</div>
-          <div className="mt-1 text-lg font-extrabold text-slate-900">{metricValue}</div>
+      <div className="mt-4 grid grid-cols-2" style={{ gap: 'clamp(0.5rem, 2vw, 0.75rem)' }}>
+        <div className="rounded-xl bg-white border border-slate-600" style={{ padding: 'clamp(0.625rem, 2vw, 0.75rem)' }}>
+          <div className="font-semibold text-slate-500" style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.75rem)' }}>{metricLabel}</div>
+          <div className="mt-1 font-extrabold text-slate-900" style={{ fontSize: 'clamp(1rem, 4vw, 1.125rem)' }}>{metricValue}</div>
         </div>
-        <div className="rounded-xl bg-slate-50 p-3">
-          <div className="text-xs font-semibold text-slate-500">{ta('Last activity')}</div>
-          <div className="mt-1 text-sm font-semibold text-slate-800">{lastActivity}</div>
+        <div className="rounded-xl bg-white border border-slate-600" style={{ padding: 'clamp(0.625rem, 2vw, 0.75rem)' }}>
+          <div className="font-semibold text-slate-500" style={{ fontSize: 'clamp(0.625rem, 2.5vw, 0.75rem)' }}>{ta('Last activity')}</div>
+          <div className="mt-1 font-semibold text-slate-800" style={{ fontSize: 'clamp(0.75rem, 3vw, 0.875rem)' }}>{lastActivity}</div>
         </div>
       </div>
 
       <button
-        className="mt-4 inline-flex w-full items-center justify-center rounded-lg bg-slate-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800 focus:outline-none"
+        className="mt-4 inline-flex w-full items-center justify-center rounded-lg bg-slate-900 font-bold text-white transition hover:bg-slate-800 focus:outline-none"
+        style={{ paddingLeft: 'clamp(0.75rem, 2.5vw, 1rem)', paddingRight: 'clamp(0.75rem, 2.5vw, 1rem)', paddingTop: 'clamp(0.625rem, 2vw, 0.75rem)', paddingBottom: 'clamp(0.625rem, 2vw, 0.75rem)', fontSize: 'clamp(0.75rem, 3vw, 0.875rem)', minHeight: '44px' }}
         onClick={onView}
         aria-label={ta(`View details for ${title}`)}
       >
@@ -50,3 +51,4 @@ export default function AgentCard({
     </div>
   );
 }
+
